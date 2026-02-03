@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestor de Inventario</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 800px; }
+    section { margin-bottom: 30px; }
+    h2 { margin-bottom: 10px; }
+    input, select, button { margin: 5px 0; padding: 5px; }
+    ul { list-style: none; padding-left: 0; }
+    li { margin: 5px 0; }
+    button { cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Gestor de Inventario</h1>
+
+  <!-- Agregar Categoría -->
+  <section>
+    <h2>Agregar Categoría</h2>
+    <input type="text" id="nombreCategoria" placeholder="Nombre categoría" />
+    <button onclick="agregarCategoria()">Agregar Categoría</button>
+    <ul id="listaCategorias"></ul>
+  </section>
+
+  <!-- Agregar Producto -->
+  <section>
+    <h2>Agregar Producto</h2>
+    <input type="text" id="nombreProducto" placeholder="Nombre producto" />
+    <select id="categoriaProducto"></select>
+    <button onclick="agregarProducto()">Agregar Producto</button>
+    <ul id="listaProductos"></ul>
+  </section>
+
+  <!-- Agregar Variación -->
+  <section>
+    <h2>Agregar Variación</h2>
+    <input type="text" id="nombreVariacion" placeholder="Nombre variación" />
+    <select id="productoVariacion"></select>
+    <button onclick="agregarVariacion()">Agregar Variación</button>
+    <ul id="listaVariaciones"></ul>
+  </section>
+
+  <!-- Exportar e Importar -->
+  <section>
+    <h2>Exportar / Importar Datos</h2>
+    <button onclick="exportarCSV()">Exportar CSV</button>
+    <input type="file" id="inputImportar" accept=".csv" onchange="importarCSV(event)" />
+  </section>
+
+<script>
+  let categorias = [];
+  let productos = [];
+  let variaciones = [];
+
+  // Funciones para agregar
+  function agregarCategoria() {
+    const nombre = document.getElementById('nombreCategoria').value.trim();
+    if (!nombre) { alert('Ingrese nombre de categoría'); return; }
+    const id = Date.now() + Math.floor(Math.random()*1000);
+    categorias.push({ id, nombre });
+    document.getElementById('nombreCategoria').value = '';
+    actualizarListas();
+  }
+
+  function agregarProducto() {
+    const nombre = document.getElementById('nombreProducto').value.trim();
+    const categoriaId = document.getElementById('categoriaProducto').value;
+    if (!nombre) { alert('Ingrese nombre de producto'); return; }
+    if (!categoriaId) { alert('Seleccione categoría'); return; }
+    const id = Date.now() + Math.floor(Math.random()*1000);
+    productos.push({ id, nombre, categoriaId });
+    document.getElementById('nombreProducto').value = '';
+    actualizarListas();
+  }
+
+  function agregarVariacion() {
+    const nombre = document.getElementById('nombreVariacion').value.trim();
+    const productoId = document.getElementById('productoVariacion').value;
+    if (!nombre) { alert('Ingrese nombre de variación'); return; }
+    if (!productoId) { alert('Seleccione producto'); return; }
+    const id = Date.now() + Math.floor(Math.random()*1000);
+    variaciones.push({ id, nombre, productoId });
+    document.getElementById('nombreVariacion').value = '';
+    actualizarListas();
+  }
+
+  // Funciones para eliminar
+  function eliminarCategoria(id) {
+    categorias = categorias.filter(c => c.id != id);
+    // También eliminar productos relacionados
+    const productosIdsAEliminar = productos.filter(p => p.categoriaId == id).map(p => p.id);
+    productos = productos.filter(p => p.categoriaId != id);
+    // Eliminar variaciones relacionadas a esos productos
+    variaciones = variaciones.filter(v => !productosIdsAEliminar.includes(v.productoId));
+    actualizarListas();
+  }
+
+  function eliminarProducto(id) {
+    productos = productos.filter(p => p.id != id);
+    variaciones = variaciones.filter(v => v.productoId != id);
+    actualizarListas();
+  }
+
+  function eliminarVariacion(id) {
+    variaciones = variaciones.filter(v => v.id != id);
+    actualizarListas();
+  }
+
+  // Actualiza las listas y selects en la interfaz
+  function actualizarListas() {
+    // Categorías
+    const listaCategorias = document.getElementById('listaCategorias');
+    listaCategorias.innerHTML = '';
+    const selectCategoriaProducto = document.getElementById('categoriaProducto');
+    selectCategoriaProducto.innerHTML = '<option value="">--Seleccione--</option>';
+    categorias.forEach(cat => {
+      const li = document.createElement('li');
+      li.textContent = cat.nombre + ' ';
+      const btn = document.createElement('button');
+      btn.textContent = 'Eliminar';
+      btn.style.marginLeft = '10px';
+      btn.onclick = () => eliminarCategoria(cat.id);
+      li.appendChild(btn);
+      listaCategorias.appendChild(li);
+
+      const opt = document.createElement('option');
+      opt.value = cat.id;
+      opt.text = cat.nombre;
+      selectCategoriaProducto.appendChild(opt);
+    });
+
+    // Productos
+    const listaProductos = document.getElementById('listaProductos');
+    listaProductos.innerHTML = '';
+    const selectProductoVariacion = document.getElementById('productoVariacion');
+    selectProductoVariacion.innerHTML = '<option value="">--Seleccione--</option>';
+    productos.forEach(prod => {
+      const categoria = categorias.find(c => c.id == prod.categoriaId);
+      const li = document.createElement('li');
+      li.textContent = `${prod.nombre} (Categoría: ${categoria ? categoria.nombre : 'Sin categoría'}) `;
+      const btn = document.createElement('button');
+      btn.textContent = 'Eliminar';
+      btn.style.marginLeft = '10px';
+      btn.onclick = () => eliminarProducto(prod.id);
+      li.appendChild(btn);
+      listaProductos.appendChild(li);
+
+      const opt = document.createElement('option');
+      opt.value = prod.id;
+      opt.text = prod.nombre;
+      selectProductoVariacion.appendChild(opt);
+    });
+
+    // Variaciones
+    const listaVariaciones = document.getElementById('listaVariaciones');
+    listaVariaciones.innerHTML = '';
+    variaciones.forEach(varia => {
+      const producto = productos.find(p => p.id == varia.productoId);
+      const li = document.createElement('li');
+      li.textContent = `${varia.nombre} (Producto: ${producto ? producto.nombre : 'Sin producto'}) `;
+      const btn = document.createElement('button');
+      btn.textContent = 'Eliminar';
+      btn.style.marginLeft = '10px';
+      btn.onclick = () => eliminarVariacion(varia.id);
+      li.appendChild(btn);
+      listaVariaciones.appendChild(li);
+    });
+  }
+
+  // Exportar CSV
+  function exportarCSV() {
+    let contenido = 'TIPO,ID,NOMBRE,RELACION\n';
+
+    categorias.forEach(c => {
+      contenido += `categoria,${c.id},"${c.nombre}",\n`;
+    });
+    productos.forEach(p => {
+      contenido += `producto,${p.id},"${p.nombre}",${p.categoriaId}\n`;
+    });
+    variaciones.forEach(v => {
+      contenido += `variacion,${v.id},"${v.nombre}",${v.productoId}\n`;
+    });
+
+    const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'respaldo_inventario.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Importar CSV
+  function importarCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target.result;
+      // Limpiar arrays
+      categorias = [];
+      productos = [];
+      variaciones = [];
+      const lineas = text.trim().split('\n');
+      // Quitar cabecera si existe
+      if (lineas[0].toLowerCase().startsWith('tipo')) {
+        lineas.shift();
+      }
+      lineas.forEach(linea => {
+        const [tipo, idStr, nombreRaw, relacion] = parseCSVLine(linea);
+        const id = Number(idStr);
+        const nombre = nombreRaw.replace(/^"|"$/g, '');
+        if (tipo === 'categoria') {
+          categorias.push({ id, nombre });
+        } else if (tipo === 'producto') {
+          productos.push({ id, nombre, categoriaId: Number(relacion) });
+        } else if (tipo === 'variacion') {
+          variaciones.push({ id, nombre, productoId: Number(relacion) });
+        }
+      });
+      actualizarListas();
+      // Limpiar input file para poder importar nuevamente el mismo archivo si se desea
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  // Función para manejar CSV con comas dentro de campos entre comillas
+  function parseCSVLine(linea) {
+    const resultado = [];
+    let actual = '';
+    let enComillas = false;
+    for (let i = 0; i < linea.length; i++) {
+      const c = linea[i];
+      if (c === '"' ) {
+        enComillas = !enComillas;
+      } else if (c === ',' && !enComillas) {
+        resultado.push(actual);
+        actual = '';
+      } else {
+        actual += c;
+      }
+    }
+    resultado.push(actual);
+    return resultado;
+  }
+
+  // Inicializar selects y listas al cargar la página
+  actualizarListas();
+</script>
+
+</body>
+</html>
+ 
